@@ -1,0 +1,11 @@
+###############################################################################################################
+##Create Tags in a resource group.                                                                         ####
+## Use as follows                                                                                          ####
+##.\create_tags.ps1 -rg "rg-tags" -loc "australiasoutheast" -cc "0001" -dept "sales" -env "prod"           ####
+###############################################################################################################
+
+Param([string]$rg,[string]$loc,[string]$cc,[string]$dept,[string]$env)
+$resource_group=$rg
+$location=$loc
+New-AzureRmResourceGroup -Name $resource_group -Location $location
+Set-AzureRmResourceGroup -Name rg-tags -Tag @{ CostCentre=$cc;Dept=$dept; Environment=$env }
