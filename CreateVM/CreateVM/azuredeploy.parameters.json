@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vNetName": {
+      "value": "vn-melb"
+    },
+    "vNetSubnet": {
+      "value": "Subnet-1"
+    },
+    "vNetResourceGroup": {
+      "value": "vn-melb-Migrated"
+    },
+    "vmName": {
+      "value": "DNVM11"
+    },
+    "vmPrivateIPaddress": {
+      "value": "10.2.0.20"
+    },
+    "domainToJoin": {
+      "value": "cni.local"
+    },
+    "domainUsername": {
+      "value": "dnvm11ocaladmin"
+    },
+    "ouPath": {
+      "value": "OU=Servers,OU=Computers,OU=CNI Dev,DC=CNI,DC=local"
+    },
+    "availabilitySetName": {
+      "value": "PAUSEDNVM9-AS1"
+    },
+    "domainPassword": {
+      "value": "P@ssw0rd123456"
+    },
+    "vmAdminUsername": {
+      "value": "dnvm11ocaladmin"
+    },
+    "vmAdminPassword": {
+      "value": "P@ssw0rd1234"
+    },
+    "vmSize": {
+      "value": "Standard_A2"
+    },
+    "diagnosticStorageAccountName": {
+      "value": "restoretestrgdiag481"
+    },
+    "diagnosticStorageAccountResourceGroup": {
+      "value": "restoretestrg"
+    }
+  }
+}

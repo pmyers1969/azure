@@ -1,0 +1,562 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "allowedValues": [
+        "Production",
+        "UAT",
+        "Test",
+        "Development",
+        "PreProduction",
+        "Training",
+        "ProductionSupport"
+      ],
+      "defaultValue": "Production",
+      "metadata": {
+        "description": "Select the environment you wish to deploy. This should match your resource group."
+      },
+      "type": "string"
+    },
+    "deploymentShortCode": {
+      "type": "string",
+      "metadata": {
+        "description": "short code to use for naming. eg. fms, icrat, rids etc"
+      }
+    },
+    "deploymentPostFix": {
+      "type": "string",
+      "defaultvalue": "01",
+      "metadata": {
+        "description": "PostFix is added to the end of the Name eg. p-ause-ps-sql-s-SERVER-01. This is applied against all resources (SQL Server, Key Vault, Storage Account etc)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "AustraliaSouthEast",
+      "allowedValues": [
+        "AustraliaSouthEast",
+        "AustraliaEast"
+      ]
+    },
+    "azureAdministratorUPN": {
+      "type": "string",
+      "metadata": {
+        "description": "Type in the full UPN of the Azure Administrator. This account will own the Key Vault secrets as well as become the SQL AAD Admin"
+      }
+    },
+    "azureAdministratorObjectID": {
+      "type": "string",
+      "metadata": {
+        "description": "Object Id of the AAD user or service principal that will have access to the vault. Available from the Get-AzureRMADUser or the Get-AzureRMADServicePrincipal cmdlets"
+      }
+    },
+    "keyVaultSku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "SKU for the key vault - Premium = HSM backed keys but incur additional cost every time the key is accessed"
+      }
+    },
+    "sqlServerAllowAccessToAzureServices": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ]
+    },
+    "sqlServerDeployServiceEndpoint": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ]
+    },
+    "sqlDatabaseCollation": {
+      "type": "string",
+      "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+    },
+    "sqlDatabaseEdition": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ]
+    },
+    "sqlDatabaseMaxSizeBytes": {
+      "type": "string",
+      "defaultValue": "268435456000",
+      "metadata": {
+        "description": "Default is 250gb. Use Google or Powershell to translate to Bytes."
+      }
+    },
+    "sqlDatabaseServiceObjectiveName": {
+      "type": "string",
+      "defaultValue": "S2",
+      "allowedValues": [
+        "Free",
+        "Basic",
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S6",
+        "S7",
+        "S9",
+        "S12",
+        "P1",
+        "P2",
+        "P4",
+        "P6",
+        "P11",
+        "P15"
+      ],
+      "metadata": {
+        "description": "Describes the performance level for Edition"
+      }
+    },
+    "sqlDatabaseAlertRuleDecreaseSizeThreshold": {
+      "type": "int",
+      "defaultValue": 20,
+      "allowedValues": [
+        5,
+        10,
+        15,
+        20,
+        25,
+        30,
+        35,
+        40,
+        45,
+        50,
+        55,
+        60,
+        65,
+        70,
+        75,
+        80,
+        85,
+        90,
+        95
+      ],
+      "metadata": {
+        "description": "Select a Theshold % for when to trigger the decrease DB size operation."
+      }
+    },
+    "sqlDatabaseAlertRuleDecreaseSizePeriod": {
+      "type": "string",
+      "defaultValue": "1H",
+      "allowedValues": [
+        "5M",
+        "10M",
+        "15M",
+        "30M",
+        "45M",
+        "1H"
+      ],
+      "metadata": {
+        "description": "Select a time span during which to monitor the metric data specified by this alert rule."
+      }
+    },
+    "sqlDatabaseAlertRuleIncreaseSizeThreshold": {
+      "type": "int",
+      "defaultValue": 80,
+      "allowedValues": [
+        5,
+        10,
+        15,
+        20,
+        25,
+        30,
+        35,
+        40,
+        45,
+        50,
+        55,
+        60,
+        65,
+        70,
+        75,
+        80,
+        85,
+        90,
+        95
+      ],
+      "metadata": {
+        "description": "Select a Theshold % for when to trigger the Increase DB size operation."
+      }
+    },
+    "sqlDatabaseAlertRuleIncreaseSizePeriod": {
+      "type": "string",
+      "defaultValue": "5M",
+      "allowedValues": [
+        "5M",
+        "10M",
+        "15M",
+        "30M",
+        "45M",
+        "1H"
+      ],
+      "metadata": {
+        "description": "Select a time span during which to monitor the metric data specified by this alert rule."
+      }
+    },
+    "vnetResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource group containing the VNET you want to add the SQL Service Epoint for"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the VNET you want to add the SQL Service Epoint for"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Subnet which belongs to the VNET you want to add the SQL Service Epoint for"
+      }
+    }
+  },
+  "variables": {
+    "tenantId": "[subscription().tenantId]",
+
+    "environmentShortCode": "[if(equals(parameters('environment'),'Production'),'P', if(equals(parameters('environment'),'UAT'),'U', if(equals(parameters('environment'),'Test'),'T', if(equals(parameters('environment'),'Development'),'D', if(equals(parameters('environment'),'PreProduction'),'PP', if(equals(parameters('environment'),'Training'),'TR', if(equals(parameters('environment'),'ProductionSupport'),'PS','P')))))))]",
+    "region": "[if(equals(parameters('location'), 'AustraliaSouthEast'), 'AUSE', if(equals(parameters('location'), 'AustraliaEast'), 'AUEA', 'AUSE'))]",
+    "deploymentPrefix": "[tolower(concat(variables('environmentShortCode'),'-',variables('Region')))]",
+
+    "storageAccountName": "[tolower(concat(replace(variables('deploymentPrefix'),'-',''),'sa','std','lrs',parameters('deploymentShortCode'),'01'))]",
+    "storageAccountType": "Standard_LRS",
+    "storageAccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+    "storageAccountURL": "[concat('https://',variables('storageAccountName'),'.blob.core.windows.net')]",
+
+
+    "sqlServerName": "[tolower(concat(variables('deploymentPrefix'),'-ps-sql-s-',parameters('deploymentShortCode'),parameters('deploymentPostFix')))]",
+    "sqlServerAdminLogin": "[tolower(concat(variables('sqlServerName'),'-admin'))]",
+    "sqlServerAdminPassword": "[concat('P', uniqueString(resourceGroup().id, '224F5A8B-51DB-46A3-A7C8-59B0DD584A41'), 'x', '!')]",
+    "sqlEmailNotifications": "support@cni.net.au",
+    "sqlServerServiceEndpoint1Name": "[tolower(concat('serviceEndpoint-',parameters('vnetName'),'-',parameters('subnetName')))]",
+
+    "sqlDatabaseName": "[tolower(concat(variables('deploymentPrefix'),'-ps-sql-db-',parameters('deploymentShortCode'),parameters('deploymentPostFix')))]",
+    "sqlDatabaseId": "[concat(resourceGroup().id,'/providers/','Microsoft.Sql/servers/', variables('sqlServerName'),'/databases/',variables('sqlDatabaseName'))]",
+    "sqlDatabaseAlertRuleWebhookURI": "https://s8events.azure-automation.net/webhooks?token=UUZPKe1u1hMWUqz5g84Dq9D%2ftdFUMHkeNefe%2fAO6LtY%3d",
+
+    //"sqlDatabaseAlertRuleDecreaseSizeDescription": "decrease NAO",
+    "sqlDatabaseAlertRuleDecreaseSizeDescription": "[concat('DTU % is more than ',parameters('sqlDatabaseAlertRuleDecreaseSizeThreshold'),' over ', parameters('sqlDatabaseAlertRuleDecreaseSizePeriod'),' >> decrease DB Size')]",
+    "sqlDatabaseAlertRuleDecreaseSizeName": "[tolower(concat(variables('sqlDatabaseName'),'-decrease-to-low'))]",
+    "sqlDatabaseAlertRuleDecreaseSizePeriod": "[toupper(concat('PT',parameters('sqlDatabaseAlertRuleDecreaseSizePeriod')))]",
+
+    //"sqlDatabaseAlertRuleIncreaseSizeDescription": "Increase NAO",
+    "sqlDatabaseAlertRuleIncreaseSizeDescription": "[concat('DTU % is more than ',parameters('sqlDatabaseAlertRuleIncreaseSizeThreshold'),' over ', parameters('sqlDatabaseAlertRuleIncreaseSizePeriod'),' >> increase DB Size')]",
+    "sqlDatabaseAlertRuleIncreaseSizeName": "[tolower(concat(variables('sqlDatabaseName'),'-increase-to-high'))]",
+    "sqlDatabaseAlertRuleIncreaseSizePeriod": "[toupper(concat('PT',parameters('sqlDatabaseAlertRuleIncreaseSizePeriod')))]",
+
+    "keyVaultName": "[tolower(concat(variables('deploymentPrefix'),'-kv-',parameters('deploymentShortCode'),parameters('deploymentPostFix')))]",
+    "enabledForDeployment": true,
+    "enabledForTemplateDeployment": true,
+    "enableVaultForDiskEncryption": true,
+
+    "vnetID": "[resourceId(parameters('vnetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+    "subnetID": "[concat(variables('vnetID'),'/subnets/', parameters('subnetName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-12-01",
+      "location": "[parameters('location')]",
+      "tags": {
+        "displayName": "StorageAccount"
+      },
+      "kind": "Storage",
+      "sku": {
+        "name": "[variables('storageAccountType')]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[variables('keyVaultName')]",
+      "apiVersion": "2015-06-01",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enabledForDeployment": "[variables('enabledForDeployment')]",
+        "enabledForTemplateDeployment": "[variables('enabledForTemplateDeployment')]",
+        "enabledForDiskEncryption": "[variables('enableVaultForDiskEncryption')]",
+        "tenantId": "[variables('tenantId')]",
+        "accessPolicies": [
+          {
+            "tenantId": "[variables('tenantId')]",
+            "objectId": "[parameters('azureAdministratorObjectID')]",
+            "permissions": {
+              "keys": [ "all", "list" ],
+              "secrets": [ "all", "list" ],
+              "certificates": [ "all", "list" ]
+            }
+          }
+        ],
+        "sku": {
+          "name": "[parameters('keyVaultSku')]",
+          "family": "A"
+        }
+      },
+      "resources": [
+        {
+          "type": "secrets",
+          "name": "[variables('sqlServerAdminLogin')]",
+          "apiVersion": "2015-06-01",
+          "properties": {
+            "value": "[variables('sqlServerAdminPassword')]"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.KeyVault/vaults/', variables('keyVaultName'))]"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "2014-04-01-preview",
+      "name": "[variables('sqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[parameters('location')]",
+      "properties": {
+        "administratorLogin": "[variables('sqlserverAdminLogin')]",
+        "administratorLoginPassword": "[variables('sqlserverAdminPassword')]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2014-04-01-preview",
+          "name": "[variables('sqlDatabaseName')]",
+          "type": "databases",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlserverName'))]"
+          ],
+          "properties": {
+            "edition": "[parameters('sqlDatabaseEdition')]",
+            "collation": "[parameters('sqlDatabaseCollation')]",
+            "maxSizeBytes": "[parameters('sqlDatabaseMaxSizeBytes')]",
+            "requestedServiceObjectiveName": "[parameters('sqlDatabaseServiceObjectiveName')]"
+          }
+        },
+        {
+          "condition": "[equals(parameters('sqlServerAllowAccessToAzureServices'), 'Yes')]",
+          "apiVersion": "2015-05-01-preview",
+          "name": "AllowAllWindowsAzureIps",
+          "type": "firewallrules",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "apiVersion": "2015-05-01-preview",
+          "name": "CNI",
+          "type": "firewallrules",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "203.26.30.2",
+            "endIpAddress": "203.26.30.2"
+          }
+        },
+        {
+          "apiVersion": "2015-05-01-preview",
+          "name": "CNI-GW",
+          "type": "firewallrules",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "13.70.183.34",
+            "endIpAddress": "13.70.183.34"
+          }
+        },
+        {
+          "apiVersion": "2014-04-01-preview",
+          "type": "administrators",
+          "name": "ActiveDirectory",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
+          ],
+          "properties": {
+            "administratorType": "ActiveDirectory",
+            "login": "[parameters('azureAdministratorUPN')]",
+            "sid": "[parameters('azureAdministratorObjectID')]",
+            "tenantId": "[variables('tenantId')]"
+          }
+        },
+        {
+          "apiVersion": "2015-05-01-preview",
+          "type": "auditingSettings",
+          "name": "auditingSettings",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "State": "Enabled",
+            "storageEndpoint": "[variables('storageAccountURL')]",
+            "storageAccountAccessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+          }
+        },
+        {
+          "apiVersion": "2015-05-01-preview",
+          "type": "securityAlertPolicies",
+          "name": "securityAlertPolicies",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "State": "Enabled",
+            "storageEndpoint": "[variables('storageAccountURL')]",
+            "storageAccountAccessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]",
+            "emailAddresses": "[variables('sqlEmailNotifications')]"
+          }
+        },
+        {
+          "condition": "[equals(parameters('sqlServerDeployServiceEndpoint'), 'Yes')]",
+          "apiVersion": "2015-05-01-preview",
+          "name": "[variables('sqlServerServiceEndpoint1Name')]",
+          "type": "virtualNetworkRules",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
+          ],
+          "properties": {
+            "virtualNetworkSubnetId": "[variables('subnetID')]",
+            "ignoreMissingVnetServiceEndpoint": true,
+            "state": "Ready"
+          }
+        }
+
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/alertRules",
+      "name": "[variables('sqlDatabaseAlertRuleDecreaseSizeName')]",
+      "apiVersion": "2016-03-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[variables('sqlDatabaseId')]"
+      ],
+      "properties": {
+        "name": "[variables('sqlDatabaseAlertRuleDecreaseSizeName')]",
+        "description": "[variables('sqlDatabaseAlertRuleDecreaseSizeDescription')]",
+        "isEnabled": true,
+        "condition": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+          "dataSource": {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+            "resourceUri": "[variables('sqlDatabaseId')]",
+            "metricName": "dtu_consumption_percent"
+          },
+          "operator": "LessThan",
+          "threshold": "[parameters('sqlDatabaseAlertRuleDecreaseSizeThreshold')]",
+          "windowSize": "[variables('sqlDatabaseAlertRuleDecreaseSizePeriod')]",
+          "timeAggregation": "Average"
+        },
+        "actions": [
+          {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleWebhookAction",
+            "serviceUri": "[variables('sqlDatabaseAlertRuleWebhookURI')]",
+            "properties": {
+            }
+          },
+          {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+            "sendToServiceOwners": false,
+            "customEmails": [
+              "[variables('sqlEmailNotifications')]"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/alertRules",
+      "name": "[variables('sqlDatabaseAlertRuleIncreaseSizeName')]",
+      "apiVersion": "2016-03-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[variables('sqlDatabaseId')]"
+      ],
+      "properties": {
+        "name": "[variables('sqlDatabaseAlertRuleIncreaseSizeName')]",
+        "description": "[variables('sqlDatabaseAlertRuleIncreaseSizeDescription')]",
+        "isEnabled": true,
+        "condition": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+          "dataSource": {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+            "resourceUri": "[variables('sqlDatabaseId')]",
+            "metricName": "dtu_consumption_percent"
+          },
+          "operator": "GreaterThanOrEqual",
+          "threshold": "[parameters('sqlDatabaseAlertRuleIncreaseSizeThreshold')]",
+          "windowSize": "[variables('sqlDatabaseAlertRuleIncreaseSizePeriod')]",
+          "timeAggregation": "Average"
+        },
+        "actions": [
+          {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleWebhookAction",
+            "serviceUri": "[variables('sqlDatabaseAlertRuleWebhookURI')]",
+            "properties": {
+            }
+          },
+          {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+            "sendToServiceOwners": false,
+            "customEmails": [
+              "[variables('sqlEmailNotifications')]"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "sqlServerAdminLogin": {
+      "value": "[variables('sqlServerAdminLogin')]",
+      "type": "string"
+    },
+    "sqlServerAdminPassword": {
+      "value": "[variables('sqlServerAdminPassword')]",
+      "type": "string"
+    },
+    "tenantID": {
+      "value": "[variables('tenantId')]",
+      "type": "string"
+    },
+    "sqlDatabaseAlertRuleDecreaseSizePeriod": {
+      "value": "[variables('sqlDatabaseAlertRuleDecreaseSizePeriod')]",
+      "type": "string"
+    },
+    "sqlDatabaseAlertRuleIncreaseSizePeriod": {
+      "value": "[variables('sqlDatabaseAlertRuleIncreaseSizePeriod')]",
+      "type": "string"
+    }
+
+  }
+}

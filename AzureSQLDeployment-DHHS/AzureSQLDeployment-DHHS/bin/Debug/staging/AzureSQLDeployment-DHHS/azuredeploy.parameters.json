@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "deploymentShortCode": {
+      "value": "rids"
+    },
+    "azureAdministratorUPN": {
+      "value": "DHHSreportingAzureAdmin@dhhsreporting.onmicrosoft.com"
+    },
+    "azureAdministratorObjectID": {
+      "value": "2898a925-4169-4aca-bfac-fe01f4748c9f"
+    },
+    "vnetResourceGroup": {
+      "value": "p-ause-rg-ase"
+    },
+    "vnetName": {
+      "value": "p-ause-vn-ase"
+    },
+    "subnetName": {
+      "value": "p-ause-sn-ase"
+    },
+    "sqlDatabaseAlertRuleDecreaseSizeThreshold": {
+      "value": 20
+    },
+    "sqlDatabaseAlertRuleIncreaseSizeThreshold": {
+      "value": 80
+    },
+    "sqlDatabaseAlertRuleIncreaseSizePeriod": {
+      "value": "5M"
+    },
+    "sqlDatabaseAlertRuleDecreaseSizePeriod": {
+      "value": "1H"
+    },
+    "deploymentPostFix": {
+      "value": "-01"
+    },
+    "environment": {
+      "value": "Production"
+    },
+    "location": {
+      "value": "AustraliaEast"
+    },
+    "sqlServerAllowAccessToAzureServices": {
+      "value": "No"
+    },
+    "sqlServerDeployServiceEndpoint": {
+      "value": "No"
+    },
+    "sqlDatabaseServiceObjectiveName": {
+      "value": "S0"
+    }
+
+  }
+}
