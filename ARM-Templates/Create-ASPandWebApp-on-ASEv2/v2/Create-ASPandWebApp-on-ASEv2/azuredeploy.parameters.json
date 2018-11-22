@@ -1,0 +1,37 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+
+    "appServiceEnvironmentName": {
+      "value": "p-ause-ase-dhhs"
+    },
+    "aseResourceGroup": {
+      "value": "p-ause-rg-ase"
+    },
+    "aseLocation": {
+      "value": "Australia Southeast"
+    },
+    "pricingTier": {
+      "value": "1"
+    },
+    "Environment": {
+      "value": "Production"
+    },
+    "deploymentShortCode": {
+      "value": "vhims"
+    },
+    "deployFunctionApp": {
+      "value": "Yes"
+    },
+    "appServicePlanCapacity": {
+      "value": 1
+    },
+    "deployAPIApp": {
+      "value": "Yes"
+    },
+    "deployWebApp": {
+      "value": "No"
+    }
+  }
+}

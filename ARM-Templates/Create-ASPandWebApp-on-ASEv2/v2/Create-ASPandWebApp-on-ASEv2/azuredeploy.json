@@ -1,0 +1,499 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Environment": {
+      "allowedValues": [
+        "Production",
+        "UAT",
+        "Test",
+        "Development",
+        "PreProduction",
+        "Training",
+        "ProductionSupport"
+      ],
+      "defaultValue": "Production",
+      "metadata": {
+        "description": "Select the Environment you wish to deploy. This should match your resource group."
+      },
+      "type": "string"
+    },
+    "deploymentShortCode": {
+      "type": "string",
+      "metadata": {
+        "description": "short code to use for naming. eg. fms, icrat, rids etc"
+      }
+    },
+    "pricingTier": {
+      "type": "string",
+      "allowedValues": [
+        "1",
+        "2",
+        "3"
+      ],
+      "defaultValue": "1",
+      "metadata": {
+        "description": "Defines pricing tier for workers: 1 = Isolated 1, 2 = Isolated 2, 3 = Isolated 3."
+      }
+    },
+    "appServicePlanCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Defines the number of instances that will be allocated to the app service plan."
+      }
+    },
+    "appServiceEnvironmentName": {
+      "type": "string",
+      "defaultValue": "p-ause-ase-dhhs",
+      "metadata": {
+        "description": "The name of the App Service Environment where the app service plan will be created."
+      }
+    },
+    "aseLocation": {
+      "type": "string",
+      "defaultValue": "Australia Southeast",
+      "allowedValues": [
+        "Australia Southeast"
+      ],
+      "metadata": {
+        "description": "Set this to the same location as the app service environment"
+      }
+    },
+    "aseResourceGroup": {
+      "type": "string",
+      "defaultValue": "p-ause-rg-ase",
+      "metadata": {
+        "description": "Name of Resource Group which contains the VNET."
+      }
+    },
+    "deployAPIApp": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ]
+    },
+    "deployFunctionApp": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ]
+    },
+    "deployWebApp": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ]
+    }
+  },
+  "variables": {
+    "environmentShortCode": "[if(equals(parameters('Environment'),'Production'),'P', if(equals(parameters('Environment'),'UAT'),'U', if(equals(parameters('Environment'),'Test'),'T', if(equals(parameters('Environment'),'Development'),'D', if(equals(parameters('Environment'),'PreProduction'),'PP', if(equals(parameters('Environment'),'Training'),'TR', if(equals(parameters('Environment'),'ProductionSupport'),'PS','P')))))))]",
+    "region": "[if(equals(parameters('aseLocation'), 'Australia Southeast'), 'AUSE', if(equals(parameters('aseLocation'), 'AustraliaEast'), 'AUEA', 'AUSE'))]",
+    "deploymentPrefix": "[tolower(concat(variables('environmentShortCode'),'-',variables('Region')))]",
+
+    "appInsightsName": "[tolower(concat(variables('deploymentPrefix'),'-ps-ais-',parameters('deploymentShortCode'),'-01'))]",
+    "appInsightsLocation": "Southeast Asia",
+    "appServicePlanName": "[tolower(concat(variables('deploymentPrefix'),'-ps-asp-',parameters('deploymentShortCode'),'-01'))]",
+    "webAppName": "[tolower(concat(variables('deploymentPrefix'),'-ps-wa-',parameters('deploymentShortCode'),'-01'))]",
+    "apiAppName": "[tolower(concat(variables('deploymentPrefix'),'-ps-api-',parameters('deploymentShortCode'),'-01'))]",
+    "functionAppName": "[tolower(concat(variables('deploymentPrefix'),'-ps-fn-',parameters('deploymentShortCode'),'-01'))]",
+
+    "storageAccountName": "[tolower(concat(replace(variables('deploymentPrefix'),'-',''),'sa','std','lrs',parameters('deploymentShortCode'),'01'))]",
+    "storageAccountType": "Standard_LRS",
+    "storageAccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+    "aseID": "[resourceId(parameters('aseResourceGroup'), 'Microsoft.Web/hostingEnvironments', variables('aseName'))]",
+    "aseName": "[tolower(parameters('appServiceEnvironmentName'))]",
+    "aspId": "[resourceId('Microsoft.Web/serverFarms/', variables('appServicePlanName'))]",
+    "autoScaleSettingName": "[concat(toLower(variables('appServicePlanName')), '-setting')]",
+    "emailNotifications": "support@cni.net.au",
+    "stagingSlotName": "staging",
+    "autoscaleEnabled": true,
+    "changePercentScaleIn": 10,
+    "changePercentScaleOut": 20,
+    "metricThresholdToScaleIn": 50,
+    "metricThresholdToScaleOut": 70,
+    "metricName": "CpuPercentage",
+    "defaultCapacity": 1,
+    "maximumCapacity": 10,
+    "minimumCapacity": 1
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-08-01",
+      "name": "[variables('appServicePlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "Australia Southeast",
+      "tags": {
+        "displayName": "AppServicePlan"
+      },
+      "properties": {
+        "name": "[variables('appServicePlanName')]",
+        "hostingEnvironmentProfile": {
+          "id": "[variables('aseID')]"
+        }
+      },
+      "sku": {
+        "name": "[concat('I',parameters('pricingTier'))]",
+        "tier": "Isolated",
+        "size": "[concat('I',parameters('pricingTier'))]",
+        "family": "I",
+        "capacity": "[parameters('appServicePlanCapacity')]"
+      }
+    },
+    {
+
+      "apiVersion": "2014-04-01",
+      "name": "[variables('appInsightsName')]",
+      "type": "Microsoft.Insights/components",
+      "location": "[variables('appInsightsLocation')]",
+      "tags": {
+        "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('webAppName'))]": "Resource",
+        "displayName": "AppInsightsComponent"
+      },
+      "properties": {
+        "applicationId": "[variables('appInsightsName')]"
+      }
+    },
+    {
+      "condition": "[equals(parameters('deployWebApp'), 'Yes')]",
+      "apiVersion": "2015-08-01",
+      "name": "[variables('webAppName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[parameters('aseLocation')]",
+      "tags": {
+        "displayName": "WebApps"
+      },
+      "properties": {
+        "name": "[variables('webAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverFarms',variables('appServicePlanName'))]",
+        "clientAffinityEnabled": false,
+        "hostingEnvironmentProfile": {
+          "id": "[variables('aseID')]"
+        },
+        "siteConfig": {
+          "AlwaysOn": true
+        }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverFarms/',variables('appServicePlanName'))]",
+        "[resourceId('microsoft.insights/components/', variables('appInsightsName'))]"
+      ],
+      "resources": [
+        {
+          "condition": "[equals(parameters('deployWebApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('webAppName'))]"
+          ],
+          "properties": {
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', variables('appInsightsName'))).InstrumentationKey]"
+          }
+        },
+        {
+          "condition": "[equals(parameters('deployWebApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "Microsoft.ApplicationInsights.AzureWebSites",
+          "type": "siteextensions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('webAppName'))]"
+          ],
+          "properties": {
+          }
+        },
+        {
+          "condition": "[equals(parameters('deployWebApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "[variables('stagingSlotName')]",
+          "type": "slots",
+          "tags": {
+            "displayName": "StagingSlot"
+          },
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('webAppName'))]"
+          ],
+          "properties": {
+            "clientAffinityEnabled": false,
+            "siteConfig": {
+              "AlwaysOn": true
+            }
+          },
+          "resources": [
+            {
+              "condition": "[equals(parameters('deployWebApp'), 'Yes')]",
+              "apiVersion": "2015-08-01",
+              "name": "appsettings",
+              "type": "config",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/Slots', variables('webAppName'), 'Staging')]"
+              ],
+              "properties": {
+                "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', variables('appInsightsName'))).InstrumentationKey]"
+              }
+            },
+            {
+              "condition": "[equals(parameters('deployWebApp'), 'Yes')]",
+              "apiVersion": "2015-08-01",
+              "name": "Microsoft.ApplicationInsights.AzureWebSites",
+              "type": "siteextensions",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/Slots', variables('webAppName'), 'Staging')]"
+              ],
+              "properties": {
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "condition": "[equals(parameters('deployAPIApp'), 'Yes')]",
+      "apiVersion": "2015-08-01",
+      "name": "[variables('apiAppName')]",
+      "kind": "api",
+      "type": "Microsoft.Web/sites",
+      "location": "[parameters('aseLocation')]",
+      "tags": {
+        "displayName": "APIApps"
+      },
+      "properties": {
+        "name": "[variables('apiAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverFarms',variables('appServicePlanName'))]",
+        "clientAffinityEnabled": false,
+        "hostingEnvironmentProfile": {
+          "id": "[variables('aseID')]"
+        },
+        "siteConfig": {
+          "AlwaysOn": true
+        }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverFarms/',variables('appServicePlanName'))]",
+        "[resourceId('microsoft.insights/components/', variables('appInsightsName'))]"
+      ],
+      "resources": [
+        {
+          "condition": "[equals(parameters('deployAPIApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('apiAppName'))]"
+          ],
+          "properties": {
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', variables('appInsightsName'))).InstrumentationKey]"
+          }
+        },
+        {
+          "condition": "[equals(parameters('deployAPIApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "Microsoft.ApplicationInsights.AzureWebSites",
+          "type": "siteextensions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('apiAppName'))]"
+          ],
+          "properties": {
+          }
+        },
+        {
+          "condition": "[equals(parameters('deployAPIApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "[variables('stagingSlotName')]",
+          "type": "slots",
+          "tags": {
+            "displayName": "StagingSlot"
+          },
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('apiAppName'))]"
+          ],
+          "properties": {
+            "clientAffinityEnabled": false,
+            "siteConfig": {
+              "AlwaysOn": true
+            }
+          },
+          "resources": [
+            {
+              "condition": "[equals(parameters('deployAPIApp'), 'Yes')]",
+              "apiVersion": "2015-08-01",
+              "name": "appsettings",
+              "type": "config",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/Slots', variables('apiAppName'), 'Staging')]"
+              ],
+              "properties": {
+                "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', variables('appInsightsName'))).InstrumentationKey]"
+              }
+            },
+            {
+              "condition": "[equals(parameters('deployAPIApp'), 'Yes')]",
+              "apiVersion": "2015-08-01",
+              "name": "Microsoft.ApplicationInsights.AzureWebSites",
+              "type": "siteextensions",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/Slots', variables('apiAppName'), 'Staging')]"
+              ],
+              "properties": {
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/autoscalesettings",
+      "name": "[variables('autoScaleSettingName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+      ],
+      "apiVersion": "2014-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "AppServicePlan-AutoScaleSettings"
+      },
+      "properties": {
+        "profiles": [
+          {
+            "name": "DefaultAutoscaleProfile",
+            "capacity": {
+              "minimum": "[variables('minimumCapacity')]",
+              "maximum": "[variables('maximumCapacity')]",
+              "default": "[variables('defaultCapacity')]"
+            },
+            "rules": [
+              {
+                "metricTrigger": {
+                  "metricName": "[variables('metricName')]",
+                  "metricNamespace": "",
+                  "metricResourceUri": "[variables('aspId')]",
+                  "timeGrain": "PT5M",
+                  "statistic": "Average",
+                  "timeWindow": "PT10M",
+                  "timeAggregation": "Average",
+                  "operator": "GreaterThan",
+                  "threshold": "[variables('metricThresholdToScaleOut')]"
+                },
+                "scaleAction": {
+                  "direction": "Increase",
+                  "type": "PercentChangeCount",
+                  "value": "[variables('changePercentScaleOut')]",
+                  "cooldown": "PT10M"
+                }
+              },
+              {
+                "metricTrigger": {
+                  "metricName": "[variables('metricName')]",
+                  "metricNamespace": "",
+                  "metricResourceUri": "[variables('aspId')]",
+                  "timeGrain": "PT5M",
+                  "statistic": "Average",
+                  "timeWindow": "PT10M",
+                  "timeAggregation": "Average",
+                  "operator": "LessThan",
+                  "threshold": "[variables('metricThresholdToScaleIn')]"
+                },
+                "scaleAction": {
+                  "direction": "Decrease",
+                  "type": "PercentChangeCount",
+                  "value": "[variables('changePercentScaleIn')]",
+                  "cooldown": "PT10M"
+                }
+              }
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "operation": "Scale",
+            "email": {
+              "sendToSubscriptionAdministrator": false,
+              "sendToSubscriptionCoAdministrators": false,
+              "customEmails": [
+                "[variables('emailNotifications')]"
+              ]
+            },
+            "webhooks": []
+          }
+        ],
+        "enabled": "[variables('autoscaleEnabled')]",
+        "targetResourceUri": "[variables('aspId')]"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-12-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "StorageAccount"
+      },
+      "kind": "Storage",
+      "sku": {
+        "name": "[variables('storageAccountType')]"
+      }
+    },
+    {
+      "condition": "[equals(parameters('deployFunctionApp'), 'Yes')]",
+      "apiVersion": "2015-08-01",
+      "name": "[variables('functionAppName')]",
+      "type": "Microsoft.Web/sites",
+      "kind": "functionapp",
+      "location": "[parameters('aseLocation')]",
+      "tags": {
+        "displayName": "FunctionApp"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[concat('Microsoft.Web/serverFarms/',variables('appServicePlanName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[variables('appServicePlanName')]",
+        "clientAffinityEnabled": false,
+        "siteConfig": {
+          "alwaysOn": true,
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~1"
+            },
+            {
+              "name": "Project",
+              "value": "src"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "condition": "[equals(parameters('deployFunctionApp'), 'Yes')]",
+          "apiVersion": "2015-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]",
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": {
+    "result": {
+      "value": "[variables('deploymentPrefix')]",
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,323 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "siteName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the web app that you wish to create."
+      }
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the App Service plan to use for hosting the web app."
+      }
+    },
+    "appServiceEnvironmentName": {
+      "type": "string",
+      "defaultValue": "p-ause-ase-dhhs",
+      "metadata": {
+        "description": "The name of the App Service Environment where the app service plan will be created."
+      }
+    },
+    "aseLocation": {
+      "type": "string",
+      "defaultValue": "AustraliaSouthEast",
+      "metadata": {
+        "description": "Set this to the same location as the app service environment"
+      }
+    },
+    "pricingTier": {
+      "type": "string",
+      "allowedValues": [
+        "1",
+        "2",
+        "3"
+      ],
+      "defaultValue": "1",
+      "metadata": {
+        "description": "Defines pricing tier for workers: 1 = Isolated 1, 2 = Isolated 2, 3 = Isolated 3."
+      }
+    },
+    "capacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Defines the number of instances that will be allocated to the app service plan."
+      }
+    },
+    "aseResourceGroup": {
+      "type": "string",
+      "defaultValue": "p-ause-rg-ase",
+      "metadata": {
+        "description": "Name of Resource Group which contains the VNET."
+      }
+    },
+    "minimumCapacity": {
+      "type": "Int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "The minimum capacity.  Autoscale engine will ensure the instance count is at least this value."
+      }
+    },
+    "maximumCapacity": {
+      "type": "Int",
+      "defaultValue": 5,
+      "metadata": {
+        "description": "The maximum capacity.  Autoscale engine will ensure the instance count is not greater than this value."
+      }
+    },
+    "defaultCapacity": {
+      "type": "Int",
+      "defaultValue": 5,
+      "metadata": {
+        "description": "The default capacity.  Autoscale engine will preventively set the instance count to be this value if it can not find any metric data."
+      }
+    },
+    "metricName": {
+      "type": "String",
+      "defaultValue": "CpuPercentage",
+      "metadata": {
+        "description": "The metric name."
+      }
+    },
+    "metricThresholdToScaleOut": {
+      "type": "Int",
+      "defaultValue": 60,
+      "metadata": {
+        "description": "The metric upper threshold.  If the metric value is above this threshold then autoscale engine will initiate scale out action."
+      }
+    },
+    "metricThresholdToScaleIn": {
+      "type": "Int",
+      "defaultValue": 20,
+      "metadata": {
+        "description": "The metric lower threshold.  If the metric value is below this threshold then autoscale engine will initiate scale in action."
+      }
+    },
+    "changePercentScaleOut": {
+      "type": "Int",
+      "defaultValue": 20,
+      "metadata": {
+        "description": "The percentage to increase the instance count when autoscale engine is initiating scale out action."
+      }
+    },
+    "changePercentScaleIn": {
+      "type": "Int",
+      "defaultValue": 10,
+      "metadata": {
+        "description": "The percentage to decrease the instance count when autoscale engine is initiating scale in action."
+      }
+    },
+    "autoscaleEnabled": {
+      "type": "Bool",
+      "metadata": {
+        "description": "A boolean to indicate whether the autoscale policy is enabled or disabled."
+      }
+    }
+  },
+  "variables": {
+    "appInsightsName": "[replace(parameters('siteName'),'wa', 'ais')]",
+    "appInsightsLocation": "Southeast Asia",
+    "aseID": "[resourceId(parameters('aseResourceGroup'), 'Microsoft.Web/hostingEnvironments', variables('aseName'))]",
+    "aseName": "[tolower(parameters('appServiceEnvironmentName'))]",
+    "aspId": "[resourceId('Microsoft.Web/serverFarms/', parameters('appServicePlanName'))]",
+    "autoScaleSettingName": "[concat(toLower(parameters('appServicePlanName')), '-setting')]",
+    "emailNotifications": "support@cni.net.au",
+    "stagingSlotName": "staging"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-08-01",
+      "name": "[parameters('appServicePlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[parameters('aseLocation')]",
+      "properties": {
+        "name": "[parameters('appServicePlanName')]",
+        "hostingEnvironmentProfile": {
+          "id": "[variables('aseID')]"
+        }
+      },
+      "sku": {
+        "name": "[concat('I',parameters('pricingTier'))]",
+        "tier": "Isolated",
+        "size": "[concat('I',parameters('pricingTier'))]",
+        "family": "I",
+        "capacity": "[parameters('capacity')]"
+      }
+    },
+    {
+      "apiVersion": "2014-04-01",
+      "name": "[variables('appInsightsName')]",
+      "type": "Microsoft.Insights/components",
+      "location": "[variables('appInsightsLocation')]",
+      "tags": {
+        "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('siteName'))]": "Resource",
+        "displayName": "AppInsightsComponent"
+      },
+      "properties": {
+        "applicationId": "[variables('appInsightsName')]"
+      }
+    },
+    {
+      "apiVersion": "2015-08-01",
+      "name": "[parameters('siteName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[parameters('aseLocation')]",
+      "properties": {
+        "name": "[parameters('siteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverFarms',parameters('appServicePlanName'))]",
+        "hostingEnvironmentProfile": {
+          "id": "[variables('aseID')]"
+        },
+        "siteConfig": {
+          "AlwaysOn": true
+        }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverFarms/',parameters('appServicePlanName'))]",
+        "[resourceId('microsoft.insights/components/', variables('appInsightsName'))]"
+      ],
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+          ],
+          "properties": {
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', variables('appInsightsName'))).InstrumentationKey]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "Microsoft.ApplicationInsights.AzureWebSites",
+          "type": "siteextensions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+          ],
+          "properties": {
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "[variables('stagingSlotName')]",
+          "type": "slots",
+          "tags": {
+            "displayName": "StagingSlot"
+          },
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+          ],
+          "properties": {
+            "siteConfig": {
+              "AlwaysOn": true
+            }
+          },
+          "resources": [
+            {
+              "apiVersion": "2015-08-01",
+              "name": "appsettings",
+              "type": "config",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/Slots', parameters('siteName'), 'Staging')]"
+              ],
+              "properties": {
+                "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', variables('appInsightsName'))).InstrumentationKey]"
+              }
+            },
+            {
+              "apiVersion": "2015-08-01",
+              "name": "Microsoft.ApplicationInsights.AzureWebSites",
+              "type": "siteextensions",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/Slots', parameters('siteName'), 'Staging')]"
+              ],
+              "properties": {
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/autoscalesettings",
+      "name": "[variables('autoScaleSettingName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+      ],
+      "apiVersion": "2014-04-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "profiles": [
+          {
+            "name": "DefaultAutoscaleProfile",
+            "capacity": {
+              "minimum": "[parameters('minimumCapacity')]",
+              "maximum": "[parameters('maximumCapacity')]",
+              "default": "[parameters('defaultCapacity')]"
+            },
+            "rules": [
+              {
+                "metricTrigger": {
+                  "metricName": "[parameters('metricName')]",
+                  "metricNamespace": "",
+                  "metricResourceUri": "[variables('aspId')]",
+                  "timeGrain": "PT5M",
+                  "statistic": "Average",
+                  "timeWindow": "PT10M",
+                  "timeAggregation": "Average",
+                  "operator": "GreaterThan",
+                  "threshold": "[parameters('metricThresholdToScaleOut')]"
+                },
+                "scaleAction": {
+                  "direction": "Increase",
+                  "type": "PercentChangeCount",
+                  "value": "[parameters('changePercentScaleOut')]",
+                  "cooldown": "PT10M"
+                }
+              },
+              {
+                "metricTrigger": {
+                  "metricName": "[parameters('metricName')]",
+                  "metricNamespace": "",
+                  "metricResourceUri": "[variables('aspId')]",
+                  "timeGrain": "PT5M",
+                  "statistic": "Average",
+                  "timeWindow": "PT10M",
+                  "timeAggregation": "Average",
+                  "operator": "LessThan",
+                  "threshold": "[parameters('metricThresholdToScaleIn')]"
+                },
+                "scaleAction": {
+                  "direction": "Decrease",
+                  "type": "PercentChangeCount",
+                  "value": "[parameters('changePercentScaleIn')]",
+                  "cooldown": "PT10M"
+                }
+              }
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "operation": "Scale",
+            "email": {
+              "sendToSubscriptionAdministrator": false,
+              "sendToSubscriptionCoAdministrators": false,
+              "customEmails": [
+                "[variables('emailNotifications')]"
+              ]
+            },
+            "webhooks": []
+          }
+        ],
+        "enabled": "[parameters('autoscaleEnabled')]",
+        "targetResourceUri": "[variables('aspId')]"
+      }
+    }
+  ]
+  }

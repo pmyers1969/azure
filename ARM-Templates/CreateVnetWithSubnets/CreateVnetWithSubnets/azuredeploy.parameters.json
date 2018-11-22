@@ -1,0 +1,106 @@
+<<<<<<< HEAD:WIP/CreateVnetWithSubnets/CreateVnetWithSubnets/azuredeploy.parameters.json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetAddressPrefix": {
+      "value": "10.96.40.0/24"
+    },
+    "gatewaySubnetPrefix": {
+      "value": "10.96.40.0/27"
+    },
+    "subnet1Prefix": {
+      "value": "10.96.40.32/27"
+    },
+    "subnet2Prefix": {
+      "value": "10.96.40.64/27"
+    },
+    "subnet3Prefix": {
+      "value": "10.96.40.96/27"
+    },
+    "subnet4Prefix": {
+      "value": "10.96.40.128/26"
+    },
+    "subnet5Prefix": {
+      "value": "10.96.40.192/26"
+    },
+    "region": {
+      "value": "AUSE"
+    },
+    "Environment": {
+      "value": "P"
+    },
+    "vnetName": {
+      "value": "VHRAv2"
+    },
+    "subnet1Name": {
+      "value": "DMZ"
+    },
+    "subnet2Name": {
+      "value": "MGMT"
+    },
+    "subnet3Name": {
+      "value": "WEB"
+    },
+    "subnet4Name": {
+      "value": "Application"
+    },
+    "subnet5Name": {
+      "value": "SecureData"
+    }
+   
+  }
+=======
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetAddressPrefix": {
+      "value": "10.96.1.0/24"
+    },
+    "gatewaySubnetPrefix": {
+      "value": "10.96.1.0/27"
+    },
+    "subnet1Prefix": {
+      "value": "10.96.1.32/27"
+    },
+    "subnet2Prefix": {
+      "value": "10.96.1.64/27"
+    },
+    "subnet3Prefix": {
+      "value": "10.96.1.96/27"
+    },
+    "subnet4Prefix": {
+      "value": "10.96.1.128/26"
+    },
+    "subnet5Prefix": {
+      "value": "10.96.1.192/26"
+    },
+    "region": {
+      "value": "AUSE"
+    },
+    "Environment": {
+      "value": "D"
+    },
+    "vnetName": {
+      "value": "MGMT"
+    },
+    "subnet1Name": {
+      "value": "DMZ"
+    },
+    "subnet2Name": {
+      "value": "MGMT"
+    },
+    "subnet3Name": {
+      "value": "WEB"
+    },
+    "subnet4Name": {
+      "value": "Application"
+    },
+    "subnet5Name": {
+      "value": "SecureData"
+    }
+   
+  }
+>>>>>>> 82c534b83a3ae39c70a4ee7992d6b7879fe20cc6:WIP/CreateVnetWithSubnets/CreateVnetWithSubnets/CreateVnetWithSubnets/azuredeploy.parameters.json
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "siteName": {
+      "value": "u-ause-ps-wa-rids-99"
+    },
+    "appServicePlanName": {
+      "value": "u-ause-ps-asp-rids-99"
+    },
+    "appServiceEnvironmentName": {
+      "value": "p-ause-ase-dhhs"
+    },
+    "aseResourceGroup": {
+      "value": "p-ause-rg-ase"
+    },
+    "maximumCapacity": {
+      "value": 10
+    },
+    "defaultCapacity": {
+      "value": 2
+    },
+    "metricThresholdToScaleOut": {
+      "value": 70
+    },
+    "metricThresholdToScaleIn": {
+      "value": 50
+    },
+    "changePercentScaleOut": {
+      "value": 10
+    },
+    "autoscaleEnabled": {
+      "value": true
+    }
+  }
+}

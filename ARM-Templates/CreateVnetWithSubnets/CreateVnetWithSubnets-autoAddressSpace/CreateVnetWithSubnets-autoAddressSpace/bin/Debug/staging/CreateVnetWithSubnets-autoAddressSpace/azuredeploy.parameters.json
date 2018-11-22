@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetAddressSpaceFirstTwoOctets": {
+      "value": "10.100"
+    },
+    "subnet3Name": {
+      "value": "App1"
+    },
+    "subnet4Name": {
+      "value": "App1-data"
+    },
+    "Environment": {
+      "value": "P"
+    },
+    "vnetName": {
+      "value": "CNI01"
+    },
+    "subnet5Name": {
+      "value": "MGMT"
+    },
+    "region": {
+      "value": "AUSE"
+    }
+  }
+}
