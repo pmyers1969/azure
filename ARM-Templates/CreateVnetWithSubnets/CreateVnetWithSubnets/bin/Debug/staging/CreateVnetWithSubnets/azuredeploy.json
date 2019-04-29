@@ -1,0 +1,469 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Environment": {
+      "type": "string",
+      "allowedValues": [
+        "PRD",
+        "TST",
+        "DEV"
+      ],
+      "defaultValue": "PRD",
+      "metadata": {
+        "description": "Select the Environment you wish to deploy the VNET into, PRD = Production, TST = Test, DEV = Dev"
+      }
+    },
+    "region": {
+      "type": "string",
+      "allowedValues": [
+        "SV-AZS",
+        "SV-AZE"
+      ],
+      "defaultValue": "SV-AZS",
+      "metadata": {
+        "description": "Select the region for your VNET, SV-AZS = Melbourne, SV-AZE = Sydney"
+      }
+    },
+    "subName": {
+      "type": "string",
+      "defaultValue": "CORE",
+      "metadata": {
+        "description": "Subscription Name"
+      }
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "172.19.0.0/20",
+      "metadata": {
+        "description": "VNET Address prefix"
+      }
+    },
+    "gatewaySubnetName": {
+      "type": "string",
+      "defaultValue": "GatewaySubnet",
+      "metadata": {
+        "description": "Name for gateway subnet in new VNet"
+      },
+      "allowedValues": [
+        "GatewaySubnet"
+      ]
+    },
+    "gatewaySubnetPrefix": {
+      "type": "string",
+      "defaultValue": "172.19.15.0/24",
+      "metadata": {
+        "description": "Gateway Subnet Prefix"
+      }
+    },
+    "subnet1Name": {
+      "type": "string",
+      "defaultValue": "FrontEnd",
+      "metadata": {
+        "description": "Subnet 1 Name"
+      }
+    },
+    "subnet1Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.0.0/24",
+      "metadata": {
+        "description": "Subnet 1 Prefix"
+      }
+    },
+    "subnet2Name": {
+      "type": "string",
+      "defaultValue": "BackEnd",
+      "metadata": {
+        "description": "Subnet 2 Name"
+      }
+    },
+    "subnet2Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.1.0/24",
+      "metadata": {
+        "description": "Subnet 2 Prefix"
+      }
+    },
+    "subnet3Name": {
+      "type": "string",
+      "defaultValue": "DMZ",
+      "metadata": {
+        "description": "Subnet 3 Name"
+      }
+    },
+    "subnet3Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.2.0/24",
+      "metadata": {
+        "description": "Subnet 3 Prefix"
+      }
+    },
+    "subnet4Name": {
+      "type": "string",
+      "defaultValue": "PUBLIC",
+      "metadata": {
+        "description": "Subnet 4 Name"
+      }
+    },
+    "subnet4Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.14.0/26",
+      "metadata": {
+        "description": "Subnet 4 Prefix"
+      }
+    },
+    "subnet5Name": {
+      "type": "string",
+      "defaultValue": "INTERNAL",
+      "metadata": {
+        "description": "Subnet 5 Name"
+      }
+    },
+    "subnet5Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.14.64/26",
+      "metadata": {
+        "description": "Subnet 5 Prefix"
+      }
+    },
+    "subnet6Name": {
+      "type": "string",
+      "defaultValue": "TRANSIT",
+      "metadata": {
+        "description": "Subnet 6 Name"
+      }
+    },
+    "subnet6Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.14.128/26",
+      "metadata": {
+        "description": "Subnet 6 Prefix"
+      }
+    }
+  },
+  "variables": {
+    "apiVersion": "2015-06-15",
+    "vnetName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-VNET'))]",
+    "subnet1Name": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet1Name')))]",
+    "subnet1NSGName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet1Name'),'-NSG'))]",
+    "subnet2Name": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet2Name')))]",
+    "subnet2NSGName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet2Name'),'-NSG'))]",
+    "subnet3Name": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet3Name')))]",
+    "subnet3NSGName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet3Name'),'-NSG'))]",
+    "subnet4Name": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet4Name')))]",
+    "subnet4NSGName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet4Name'),'-NSG'))]",
+    "subnet5Name": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet5Name')))]",
+    "subnet5NSGName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet5Name'),'-NSG'))]",
+    "subnet6Name": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet6Name')))]",
+    "subnet6NSGName": "[tolower(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),parameters('subnet6Name'),'-NSG'))]",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
+    "gatewaySubnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('gatewaySubnetName'))]"
+  },
+    "resources": [
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('subnet1NSGName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[tolower(concat(variables('subnet1NSGName'),'-IR-ALLOW-LOCAL-SUBNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('subnet1Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 4095,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet1NSGName'),'-IR-DENY-LOCAL-VNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('vnetAddressPrefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 4096,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('subnet2NSGName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[tolower(concat(variables('subnet2NSGName'),'-IR-ALLOW-DMZ-SN-443'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "[parameters('subnet1Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet2NSGName'),'-IR-ALLOW-LOCAL-SUBNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('subnet2Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 4095,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet2NSGName'),'-IR-DENY-LOCAL-VNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('vnetAddressPrefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 4096,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('subnet3NSGName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[tolower(concat(variables('subnet3NSGName'),'-IR-ALLOW-JUMP-SN-RDP-3389'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "[parameters('subnet2Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet3NSGName'),'-IR-ALLOW-LOCAL-SUBNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('subnet3Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 4095,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet3NSGName'),'-IR-DENY-LOCAL-VNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('vnetAddressPrefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 4096,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('subnet4NSGName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[tolower(concat(variables('subnet4NSGName'),'-IR-ALLOW-JUMP-SN-RDP-3389'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "[parameters('subnet2Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet4NSGName'),'-IR-ALLOW-LOCAL-SUBNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('subnet4Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 4095,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet4NSGName'),'-IR-DENY-LOCAL-VNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('vnetAddressPrefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 4096,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('subnet5NSGName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[tolower(concat(variables('subnet5NSGName'),'-IR-ALLOW-JUMP-SN-RDP-3389'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "[parameters('subnet2Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet5NSGName'),'-IR-ALLOW-LOCAL-SUBNET'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('subnet5Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 4095,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[tolower(concat(variables('subnet5NSGName'),'-IR-DENY-DMZ-SN'))]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('subnet1Prefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 4096,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('vnetName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('subnet1NSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('subnet2NSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('subnet3NSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('subnet4NSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('subnet5NSGName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet1Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('subnet1NSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('subnet2Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet2Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('subnet2NSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('subnet3Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet3Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('subnet3NSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('subnet4Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet4Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('subnet4NSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('subnet5Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet5Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('subnet5NSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('gatewaySubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('gatewaySubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

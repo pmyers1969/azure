@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetAddressPrefix": {
+      "value": "172.19.0.0/20"
+    },
+    "gatewaySubnetPrefix": {
+      "value": "172.19.15.0/24"
+    },
+    "subnet1Prefix": {
+      "value": "172.19.0.0/24"
+    },
+    "subnet2Prefix": {
+      "value": "172.19.1.0/24"
+    },
+    "subnet3Prefix": {
+      "value": "172.19.2.0/24"
+    },
+    "subnet4Prefix": {
+      "value": "172.19.14.0/26"
+    },
+    "subnet5Prefix": {
+      "value": "172.19.14.64/26"
+    },
+    "subnet6Prefix": {
+      "value": "172.19.14.128/26"
+    },
+    "region": {
+      "value": "SV-AZS"
+    },
+    "Environment": {
+      "value": "PRD"
+    },
+    "subnet1Name": {
+      "value": "FrontEnd"
+    },
+    "subnet2Name": {
+      "value": "BackEnd"
+    },
+    "subnet3Name": {
+      "value": "DMZ"
+    },
+    "subnet4Name": {
+      "value": "PUBLIC"
+    },
+    "subnet5Name": {
+      "value": "INTERNAL"
+    },
+    "subnet6Name": {
+      "value": "TRANSIT"
+    }
+  }
+}

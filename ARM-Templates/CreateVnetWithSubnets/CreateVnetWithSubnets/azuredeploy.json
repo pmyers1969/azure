@@ -5,37 +5,36 @@
     "Environment": {
       "type": "string",
       "allowedValues": [
-        "P",
-        "U",
-        "T",
-        "D"
+        "PRD",
+        "TST",
+        "DEV"
       ],
-      "defaultValue": "P",
+      "defaultValue": "PRD",
       "metadata": {
-        "description": "Select the Environment you wish to deploy the VNET into, P = Production, U = UAT, T = Test, D = Dev"
+        "description": "Select the Environment you wish to deploy the VNET into, PRD = Production, TST = Test, DEV = Dev"
       }
     },
     "region": {
       "type": "string",
       "allowedValues": [
-        "AUSE",
-        "AUEA"
+        "SV-AZS",
+        "SV-AZE"
       ],
-      "defaultValue": "AUSE",
+      "defaultValue": "SV-AZS",
       "metadata": {
-        "description": "Select the region for your VNET, AUSE = Melbourne, AUEA = Sydney"
+        "description": "Select the region for your VNET, SV-AZS = Melbourne, SV-AZE = Sydney"
       }
     },
-    "vnetName": {
+    "subName": {
       "type": "string",
-      "defaultValue": "Vnet01",
+      "defaultValue": "CORE",
       "metadata": {
-        "description": "Subnet 4 Name"
+        "description": "Subscription Name"
       }
     },
     "vnetAddressPrefix": {
       "type": "string",
-      "defaultValue": "10.100.0.0/17",
+      "defaultValue": "172.19.0.0/20",
       "metadata": {
         "description": "VNET Address prefix"
       }
@@ -52,100 +51,115 @@
     },
     "gatewaySubnetPrefix": {
       "type": "string",
-      "defaultValue": "10.100.0.0/24",
+      "defaultValue": "172.19.15.0/24",
       "metadata": {
         "description": "Gateway Subnet Prefix"
       }
     },
     "subnet1Name": {
       "type": "string",
-      "defaultValue": "DMZ",
+      "defaultValue": "FrontEnd",
       "metadata": {
         "description": "Subnet 1 Name"
       }
     },
     "subnet1Prefix": {
       "type": "string",
-      "defaultValue": "10.100.16.0/24",
+      "defaultValue": "172.19.0.0/24",
       "metadata": {
         "description": "Subnet 1 Prefix"
       }
     },
     "subnet2Name": {
       "type": "string",
-      "defaultValue": "JUMP",
+      "defaultValue": "BackEnd",
       "metadata": {
         "description": "Subnet 2 Name"
       }
     },
     "subnet2Prefix": {
       "type": "string",
-      "defaultValue": "10.100.17.0/24",
+      "defaultValue": "172.19.1.0/24",
       "metadata": {
         "description": "Subnet 2 Prefix"
       }
     },
     "subnet3Name": {
       "type": "string",
-      "defaultValue": "App1",
+      "defaultValue": "DMZ",
       "metadata": {
         "description": "Subnet 3 Name"
       }
     },
     "subnet3Prefix": {
       "type": "string",
-      "defaultValue": "10.100.32.0/24",
+      "defaultValue": "172.19.2.0/24",
       "metadata": {
         "description": "Subnet 3 Prefix"
       }
     },
     "subnet4Name": {
       "type": "string",
-      "defaultValue": "App1-data",
+      "defaultValue": "PUBLIC",
       "metadata": {
         "description": "Subnet 4 Name"
       }
     },
     "subnet4Prefix": {
       "type": "string",
-      "defaultValue": "10.100.48.0/24",
+      "defaultValue": "172.19.14.0/26",
       "metadata": {
         "description": "Subnet 4 Prefix"
       }
     },
     "subnet5Name": {
       "type": "string",
-      "defaultValue": "IDAM",
+      "defaultValue": "INTERNAL",
       "metadata": {
-        "description": "Subnet 4 Name"
+        "description": "Subnet 5 Name"
       }
     },
     "subnet5Prefix": {
       "type": "string",
-      "defaultValue": "10.100.64.0/24",
+      "defaultValue": "172.19.14.64/26",
       "metadata": {
-        "description": "Subnet 4 Prefix"
+        "description": "Subnet 5 Prefix"
+      }
+    },
+    "subnet6Name": {
+      "type": "string",
+      "defaultValue": "TRANSIT",
+      "metadata": {
+        "description": "Subnet 6 Name"
+      }
+    },
+    "subnet6Prefix": {
+      "type": "string",
+      "defaultValue": "172.19.14.128/26",
+      "metadata": {
+        "description": "Subnet 6 Prefix"
       }
     }
   },
   "variables": {
     "apiVersion": "2015-06-15",
-    "deploymentPrefix": "[tolower(concat(parameters('Environment'),'-',parameters('Region')))]",
-    "vnetName": "[tolower(concat(variables('deploymentPrefix'),'-VN-',parameters('vnetName')))]",
-    "subnet1Name": "[tolower(concat(variables('deploymentPrefix'),'-SN-',parameters('subnet1Name')))]",
-    "subnet1NSGName": "[tolower(concat(variables('deploymentPrefix'),'-NSG-',parameters('vnetName'),'-',parameters('subnet1Name')))]",
-    "subnet2Name": "[tolower(concat(variables('deploymentPrefix'),'-SN-',parameters('subnet2Name')))]",
-    "subnet2NSGName": "[tolower(concat(variables('deploymentPrefix'),'-NSG-',parameters('vnetName'),'-',parameters('subnet2Name')))]",
-    "subnet3Name": "[tolower(concat(variables('deploymentPrefix'),'-SN-',parameters('subnet3Name')))]",
-    "subnet3NSGName": "[tolower(concat(variables('deploymentPrefix'),'-NSG-',parameters('vnetName'),'-',parameters('subnet3Name')))]",
-    "subnet4Name": "[tolower(concat(variables('deploymentPrefix'),'-SN-',parameters('subnet4Name')))]",
-    "subnet4NSGName": "[tolower(concat(variables('deploymentPrefix'),'-NSG-',parameters('vnetName'),'-',parameters('subnet4Name')))]",
-    "subnet5Name": "[tolower(concat(variables('deploymentPrefix'),'-SN-',parameters('subnet5Name')))]",
-    "subnet5NSGName": "[tolower(concat(variables('deploymentPrefix'),'-NSG-',parameters('vnetName'),'-',parameters('subnet5Name')))]",
+    "vnetName": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-VNET')]",
+    "subnet1Name": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet1Name'))]",
+    "subnet1NSGName": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet1Name'),'-NSG')]",
+    "subnet2Name": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet2Name'))]",
+    "subnet2NSGName": "(concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet2Name'),'-NSG')]",
+    "subnet3Name": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet3Name'))]",
+    "subnet3NSGName": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet3Name'),'-NSG')]",
+    "subnet4Name": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet4Name'))]",
+    "subnet4NSGName": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet4Name'),'-NSG')]",
+    "subnet5Name": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet5Name'))]",
+    "subnet5NSGName": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet5Name'),'-NSG')]",
+    "subnet6Name": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet6Name'))]",
+    "subnet6NSGName": "[concat(parameters('region'),'-',parameters('subName'),'-',parameters('Environment'),'-',parameters('subnet6Name'),'-NSG')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
     "gatewaySubnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('gatewaySubnetName'))]"
   },
-  "resources": [
+    "resources": [
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/networkSecurityGroups",
@@ -153,26 +167,39 @@
       "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
-           {
-            "name": "[tolower(concat(variables('subnet1NSGName'),'-IR-ALLOW-LOCAL-SUBNET'))]",
+          {
+            "name": "DenyOverallAddressSpace1",
             "properties": {
               "protocol": "*",
               "sourcePortRange": "*",
               "destinationPortRange": "*",
-              "sourceAddressPrefix": "[parameters('subnet1Prefix')]",
+              "sourceAddressPrefix": "10.0.0.0/8",
               "destinationAddressPrefix": "*",
-              "access": "Allow",
+              "access": "Deny",
+              "priority": 4094,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "DenyOverallAddressSpace2",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "172.16.0.0/12",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
               "priority": 4095,
               "direction": "Inbound"
             }
           },
           {
-            "name": "[tolower(concat(variables('subnet1NSGName'),'-IR-DENY-LOCAL-VNET'))]",
+            "name": "DenyOverallAddressSpace3",
             "properties": {
               "protocol": "*",
               "sourcePortRange": "*",
               "destinationPortRange": "*",
-              "sourceAddressPrefix": "[parameters('vnetAddressPrefix')]",
+              "sourceAddressPrefix": "192.168.0.0/16",
               "destinationAddressPrefix": "*",
               "access": "Deny",
               "priority": 4096,
@@ -452,4 +479,4 @@
       }
     }
   ]
-  }
+}
